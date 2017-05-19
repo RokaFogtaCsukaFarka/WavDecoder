@@ -10,12 +10,13 @@ public class Decoder {
 		//System.out.println("Which file would you like to process?");
 		
 		try {
-			WavData data = new WavData("/home/bharmath/Dokumentumok/ch24/"
-					+ "PROBLEMSET_15_PREEC/input/P/0.wav");
+			WavData data = new WavData("input/0.wav");
 			
 			System.out.print(data.getData());
 		} catch (FileNotFoundException e) {
 			System.out.println(e.toString());
+		} catch (Exception e) {
+			System.out.print(e.toString());
 		}
 		System.out.println("Goodbye!");
 		

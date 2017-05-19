@@ -25,23 +25,28 @@ public class WavData {
 	private Integer subchunk2Size;
 	private String data;
 	
-	WavData(String fileName) throws FileNotFoundException{
+	WavData(String fileName) throws FileNotFoundException, Exception {
 		try {
 			RandomAccessFile raf = new RandomAccessFile(fileName, "r");
 			FileChannel channel = raf.getChannel();
 			MappedByteBuffer map;
-			IntBuffer intBuffer;
 			CharBuffer charBuffer;
+			Long fileLength = raf.length();
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,0, 4);
 			map.order(ByteOrder.BIG_ENDIAN);
 			charBuffer = map.asCharBuffer();
-			chunkId = new String(charBuffer.array());
+			if(charBuffer.hasArray())
+				chunkId = new String(charBuffer.array());
+			else {
+				raf.close();
+				throw(new Exception("Has not the array!"));
+			}
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,4, 4);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			chunkSize = Integer.parseInt(new String(intBuffer.array(), 0, 4));
+			charBuffer = map.asCharBuffer();
+			chunkSize = Integer.parseInt(new String(charBuffer.array()));
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,8, 4);
 			map.order(ByteOrder.BIG_ENDIAN);
@@ -55,8 +60,8 @@ public class WavData {
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,16, 4);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			subchunk1Size = Integer.parseInt(new String(intBuffer.array(), 0, 4));
+			charBuffer = map.asCharBuffer();
+			subchunk1Size = Integer.parseInt(new String(charBuffer.array()));
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,20, 2);
 			map.order(ByteOrder.LITTLE_ENDIAN);
@@ -65,29 +70,29 @@ public class WavData {
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,22, 4);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			numChannels = Integer.parseInt(new String(intBuffer.array(), 0, 4));
+			charBuffer = map.asCharBuffer();
+			numChannels = Integer.parseInt(new String(charBuffer.array()));
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,24, 4);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			sampleRate = Integer.parseInt(new String(intBuffer.array(), 0, 4));			
+			charBuffer = map.asCharBuffer();
+			sampleRate = Integer.parseInt(new String(charBuffer.array()));			
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,28,4);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			byteRate = Integer.parseInt(new String(intBuffer.array(), 0, 4));			
+			charBuffer = map.asCharBuffer();
+			byteRate = Integer.parseInt(new String(charBuffer.array()));			
 			
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,32, 2);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			blockAlign = Integer.parseInt(new String(intBuffer.array(), 0, 2));		
+			charBuffer = map.asCharBuffer();
+			blockAlign = Integer.parseInt(new String(charBuffer.array()));		
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,34, 2);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			bitsPerSample = Integer.parseInt(new String(intBuffer.array(), 0, 2));
+			charBuffer = map.asCharBuffer();
+			bitsPerSample = Integer.parseInt(new String(charBuffer.array()));
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,36, 4);
 			map.order(ByteOrder.BIG_ENDIAN);
@@ -96,21 +101,24 @@ public class WavData {
 			
 			map = channel.map(FileChannel.MapMode.READ_ONLY,40, 4);
 			map.order(ByteOrder.LITTLE_ENDIAN);
-			intBuffer = map.asIntBuffer();
-			subchunk2Size = Integer.parseInt(new String(intBuffer.array(), 0, 4));
+			charBuffer = map.asCharBuffer();
+			subchunk2Size = Integer.parseInt(new String(charBuffer.array()));
 			
-			Integer at = 40;
-			map = channel.map(FileChannel.MapMode.READ_ONLY,at,16);
-			while(!map.equals(null)) {
+			
+			Long available = fileLength - 40;
+			
+			while(available > 0) {
+				map = channel.map(FileChannel.MapMode.READ_ONLY,fileLength - available,16);
 				map.order(ByteOrder.LITTLE_ENDIAN);
 				charBuffer = map.asCharBuffer();
 				data += new String(charBuffer.array());
 				
-				at += 4;
-				map = channel.map(FileChannel.MapMode.READ_ONLY,at,16);			
+				available -= 4;
 			}
 			
 			raf.close();
+		} catch(UnsupportedOperationException e) {
+			System.out.print(e.toString());
 		} catch(IOException exception) {
 			System.out.println(exception.toString() + "/nTry again!");
 		} finally {
