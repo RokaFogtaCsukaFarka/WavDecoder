@@ -1,9 +1,13 @@
 package WavDecoder;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.io.RandomAccessFile;
+import java.nio.ByteOrder;
+import java.nio.CharBuffer;
+import java.nio.IntBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 
 public class WavData {
 	private String chunkId;
@@ -23,55 +27,90 @@ public class WavData {
 	
 	WavData(String fileName) throws FileNotFoundException{
 		try {
-			FileInputStream reader = new FileInputStream(fileName);
-			byte[] buffer = new byte[16];
-		
-			reader.read(buffer, 0, 4);
-			chunkId = new String(buffer, StandardCharsets.UTF_8);
+			RandomAccessFile raf = new RandomAccessFile(fileName, "r");
+			FileChannel channel = raf.getChannel();
+			MappedByteBuffer map;
+			IntBuffer intBuffer;
+			CharBuffer charBuffer;
 			
-			reader.read(buffer,4,4);
-			chunkSize = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
+			map = channel.map(FileChannel.MapMode.READ_ONLY,0, 4);
+			map.order(ByteOrder.BIG_ENDIAN);
+			charBuffer = map.asCharBuffer();
+			chunkId = new String(charBuffer.array());
 			
-			reader.read(buffer,8,4);
-			format = new String(buffer, StandardCharsets.UTF_8);
+			map = channel.map(FileChannel.MapMode.READ_ONLY,4, 4);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			chunkSize = Integer.parseInt(new String(intBuffer.array(), 0, 4));
 			
-			reader.read(buffer,12,4);
-			subchunk1Id = new String(buffer, StandardCharsets.UTF_8);
+			map = channel.map(FileChannel.MapMode.READ_ONLY,8, 4);
+			map.order(ByteOrder.BIG_ENDIAN);
+			charBuffer = map.asCharBuffer();
+			format = new String(charBuffer.array());
 			
-			reader.read(buffer,16,4);
-			subchunk1Size = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
+			map = channel.map(FileChannel.MapMode.READ_ONLY,12, 4);
+			map.order(ByteOrder.BIG_ENDIAN);
+			charBuffer = map.asCharBuffer();
+			subchunk1Id = new String(charBuffer.array());
 			
-			reader.read(buffer,20,2);
-			audioFormat = new String(buffer, StandardCharsets.UTF_8);
+			map = channel.map(FileChannel.MapMode.READ_ONLY,16, 4);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			subchunk1Size = Integer.parseInt(new String(intBuffer.array(), 0, 4));
 			
-			reader.read(buffer,22,2);
-			numChannels = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
+			map = channel.map(FileChannel.MapMode.READ_ONLY,20, 2);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			charBuffer = map.asCharBuffer();
+			audioFormat = new String(charBuffer.array());
 			
-			reader.read(buffer,24,4);
-			sampleRate = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
+			map = channel.map(FileChannel.MapMode.READ_ONLY,22, 4);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			numChannels = Integer.parseInt(new String(intBuffer.array(), 0, 4));
 			
-			reader.read(buffer,28,4);
-			byteRate = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
+			map = channel.map(FileChannel.MapMode.READ_ONLY,24, 4);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			sampleRate = Integer.parseInt(new String(intBuffer.array(), 0, 4));			
 			
-			reader.read(buffer,32,2);
-			blockAlign = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
+			map = channel.map(FileChannel.MapMode.READ_ONLY,28,4);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			byteRate = Integer.parseInt(new String(intBuffer.array(), 0, 4));			
 			
-			reader.read(buffer,34,2);
-			bitsPerSample = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
 			
-			reader.read(buffer,36,4);
-			subchunk2Id = new String(buffer, StandardCharsets.UTF_8);
+			map = channel.map(FileChannel.MapMode.READ_ONLY,32, 2);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			blockAlign = Integer.parseInt(new String(intBuffer.array(), 0, 2));		
 			
-			reader.read(buffer,40,4);
-			subchunk2Size = Integer.getInteger(new String(buffer, StandardCharsets.UTF_8));
+			map = channel.map(FileChannel.MapMode.READ_ONLY,34, 2);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			bitsPerSample = Integer.parseInt(new String(intBuffer.array(), 0, 2));
 			
-			Integer available = reader.available();
-			while(available > 15) {
-				reader.read(buffer,chunkSize- available,16);
-				data += new String(buffer, StandardCharsets.UTF_8);
+			map = channel.map(FileChannel.MapMode.READ_ONLY,36, 4);
+			map.order(ByteOrder.BIG_ENDIAN);
+			charBuffer = map.asCharBuffer();
+			subchunk2Id = new String(charBuffer.array());
+			
+			map = channel.map(FileChannel.MapMode.READ_ONLY,40, 4);
+			map.order(ByteOrder.LITTLE_ENDIAN);
+			intBuffer = map.asIntBuffer();
+			subchunk2Size = Integer.parseInt(new String(intBuffer.array(), 0, 4));
+			
+			Integer at = 40;
+			map = channel.map(FileChannel.MapMode.READ_ONLY,at,16);
+			while(!map.equals(null)) {
+				map.order(ByteOrder.LITTLE_ENDIAN);
+				charBuffer = map.asCharBuffer();
+				data += new String(charBuffer.array());
 				
-				available = reader.available();
+				at += 4;
+				map = channel.map(FileChannel.MapMode.READ_ONLY,at,16);			
 			}
+			
+			raf.close();
 		} catch(IOException exception) {
 			System.out.println(exception.toString() + "/nTry again!");
 		} finally {
